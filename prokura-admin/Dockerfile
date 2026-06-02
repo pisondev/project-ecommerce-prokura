@@ -12,4 +12,4 @@ COPY . .
 
 EXPOSE 8501
 
-CMD ["python", "-m", "streamlit", "run", "app3.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--browser.gatherUsageStats=false"]
+CMD ["python", "-m", "streamlit", "run", "app3.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableCORS=false", "--server.enableXsrfProtection=false", "--server.enableWebsocketCompression=false", "--browser.gatherUsageStats=false"]
