@@ -16,12 +16,29 @@ services:
       timeout: 5s
       retries: 10
 
+  prokura-api-gateway:
+    build: ./prokura-api
+    container_name: prokura-api-gateway
+    restart: always
+    ports:
+      - "127.0.0.1:${PROKURA_API_GATEWAY_HOST_PORT:-5010}:5000"
+    environment:
+      PGHOST: prokura-db
+      PGPORT: 5432
+      PGUSER: ${PROKURA_DB_USER}
+      PGPASSWORD: ${PROKURA_DB_PASSWORD}
+      PGDATABASE: ${PROKURA_DB_NAME}
+      PORT: 5000
+    depends_on:
+      prokura-db:
+        condition: service_healthy
+
   prokura-catalog-service:
     build: ./prokura-api
     container_name: prokura-catalog-service
     restart: always
     ports:
-      - "${PROKURA_CATALOG_HOST_PORT:-5101}:5101"
+      - "127.0.0.1:${PROKURA_CATALOG_HOST_PORT:-5101}:5101"
     command: ["npm", "run", "service:catalog"]
     environment:
       PGHOST: prokura-db
@@ -40,7 +57,7 @@ services:
     container_name: prokura-inventory-service
     restart: always
     ports:
-      - "${PROKURA_INVENTORY_HOST_PORT:-5102}:5102"
+      - "127.0.0.1:${PROKURA_INVENTORY_HOST_PORT:-5102}:5102"
     command: ["npm", "run", "service:inventory"]
     environment:
       PGHOST: prokura-db
@@ -59,7 +76,7 @@ services:
     container_name: prokura-customer-service
     restart: always
     ports:
-      - "${PROKURA_CUSTOMER_HOST_PORT:-5103}:5103"
+      - "127.0.0.1:${PROKURA_CUSTOMER_HOST_PORT:-5103}:5103"
     command: ["npm", "run", "service:customer"]
     environment:
       PGHOST: prokura-db
@@ -78,7 +95,7 @@ services:
     container_name: prokura-order-service
     restart: always
     ports:
-      - "${PROKURA_ORDER_HOST_PORT:-5104}:5104"
+      - "127.0.0.1:${PROKURA_ORDER_HOST_PORT:-5104}:5104"
     command: ["npm", "run", "service:order"]
     environment:
       PGHOST: prokura-db
@@ -97,7 +114,7 @@ services:
     container_name: prokura-reporting-service
     restart: always
     ports:
-      - "${PROKURA_REPORTING_HOST_PORT:-5105}:5105"
+      - "127.0.0.1:${PROKURA_REPORTING_HOST_PORT:-5105}:5105"
     command: ["npm", "run", "service:reporting"]
     environment:
       PGHOST: prokura-db
@@ -110,3 +127,27 @@ services:
     depends_on:
       prokura-db:
         condition: service_healthy
+
+  prokura-web:
+    build:
+      context: ./prokura-web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${PROKURA_PUBLIC_API_BASE_URL}
+    container_name: prokura-web
+    restart: always
+    ports:
+      - "127.0.0.1:${PROKURA_WEB_HOST_PORT:-3011}:3000"
+    depends_on:
+      - prokura-api-gateway
+
+  prokura-admin:
+    build: ./prokura-admin
+    container_name: prokura-admin
+    restart: always
+    ports:
+      - "127.0.0.1:${PROKURA_ADMIN_HOST_PORT:-8501}:8501"
+    environment:
+      PROKURA_API_BASE_URL: http://prokura-api-gateway:5000
+      PROKURA_WEB_URL: ${PROKURA_PUBLIC_WEB_URL}
+    depends_on:
+      - prokura-api-gateway
