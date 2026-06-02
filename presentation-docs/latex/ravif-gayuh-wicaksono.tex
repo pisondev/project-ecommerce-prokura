@@ -3,18 +3,58 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
+\usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{tikz}
-\usetikzlibrary{positioning,arrows.meta}
+\usetikzlibrary{positioning,arrows.meta,fit,calc}
 \definecolor{codebg}{RGB}{248,250,252}
 \definecolor{codeblue}{RGB}{37,99,235}
 \definecolor{codegreen}{RGB}{22,101,52}
 \definecolor{codered}{RGB}{185,28,28}
 \definecolor{codegray}{RGB}{100,116,139}
+\definecolor{codeink}{RGB}{30,64,175}
+\definecolor{codepurple}{RGB}{126,34,206}
+\definecolor{codeorange}{RGB}{194,65,12}
+\definecolor{codeslate}{RGB}{51,65,85}
 \lstdefinelanguage{JavaScript}{morekeywords={const,let,var,async,await,function,try,catch,return,if,else,for,of,require,module,exports},sensitive=true,morecomment=[l]{//},morestring=[b]",morestring=[b]`}
-\lstdefinestyle{prokuraCode}{basicstyle=\ttfamily\small,breaklines=true,frame=single,columns=fullflexible,keepspaces=true,showspaces=false,showstringspaces=false,showtabs=false,tabsize=2,numbers=left,numberstyle=\tiny\color{codegray},keywordstyle=\color{codeblue}\bfseries,stringstyle=\color{codered},commentstyle=\color{codegreen},rulecolor=\color{codegray},backgroundcolor=\color{codebg}}
+\lstdefinestyle{prokuraCode}{basicstyle=\ttfamily\small\color{codeink},breaklines=true,frame=single,columns=fullflexible,keepspaces=true,showspaces=false,showstringspaces=false,showtabs=false,tabsize=2,numbers=left,numberstyle=\tiny\color{codegray},keywordstyle=\color{codepurple}\bfseries,stringstyle=\color{codeorange},commentstyle=\color{codegreen}\itshape,identifierstyle=\color{codeink},rulecolor=\color{codeblue},backgroundcolor=\color{codebg},emphstyle=\color{codered}\bfseries,captionpos=b}
 \lstset{style=prokuraCode}
+\newcommand{\demoscreenshot}[2]{
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\linewidth,height=0.58\textheight,keepaspectratio]{#1}
+\caption{#2}
+\end{figure}
+}
+\newcommand{\validationdiagram}{
+\begin{center}
+\begin{tikzpicture}[stage/.style={draw, rounded corners, fill=blue!5, align=center, font=\small, minimum width=3.0cm, minimum height=1.1cm}, rel/.style={-Latex, thick, draw=codeblue}]
+\node[stage] (unit) {Unit Test\\domain/repository};
+\node[stage, right=0.7cm of unit] (integration) {Integration Test\\API + PostgreSQL};
+\node[stage, right=0.7cm of integration] (smoke) {Smoke Test\\alur demo penuh};
+\node[stage, below=0.75cm of integration] (evidence) {Bukti Demo\\UI, endpoint, SQL, data};
+\draw[rel] (unit) -- (integration);
+\draw[rel] (integration) -- (smoke);
+\draw[rel] (smoke) |- (evidence);
+\draw[rel] (unit) |- (evidence);
+\end{tikzpicture}
+\end{center}
+}
+\newcommand{\featureflow}[4]{
+\begin{center}
+\begin{tikzpicture}[flowbox/.style={draw=codeblue, rounded corners=3pt, fill=codebg, align=center, font=\small, text width=2.85cm, minimum height=1.15cm, inner sep=5pt}, flowarrow/.style={-Latex, thick, draw=codeblue}]
+\node[flowbox] (ui) {#1};
+\node[flowbox, right=0.6cm of ui] (api) {#2};
+\node[flowbox, right=0.6cm of api] (db) {#3};
+\node[flowbox, right=0.6cm of db] (result) {#4};
+\draw[flowarrow] (ui) -- (api);
+\draw[flowarrow] (api) -- (db);
+\draw[flowarrow] (db) -- (result);
+\end{tikzpicture}
+\end{center}
+}
+
 \newcommand{\docheader}[2]{
 \begin{titlepage}
 \centering
@@ -22,17 +62,18 @@
 \vspace{0.4cm}
 {\large Dokumentasi Fitur Microservice Final Project\par}
 \vspace{0.8cm}
-{\large Mata Kuliah: Proyek 2 - Final Project\par}
+{\large Workshop Implementasi Rekayasa Perangkat Lunak\par}
 \vspace{1.2cm}
 {\large\bfseries #1\par}
 {\large NIM: #2\par}
+\vspace{0.7cm}
+\includegraphics[width=4.0cm]{../screenshots/ugm-logo.png}\par
+\vspace{0.5cm}
 \vfill
-\begin{tabular}{rl}
-Program Studi: & Ilmu Komputer\\
-Departemen: & Departemen Ilmu Komputer dan Elektronika (DIKE)\\
-Fakultas: & FMIPA\\
-Universitas: & Universitas Gadjah Mada\\
-\end{tabular}
+{\large Ilmu Komputer\par}
+{\large Departemen Ilmu Komputer dan Elektronika (DIKE)\par}
+{\large Fakultas Matematika dan Ilmu Pengetahuan Alam\par}
+{\large Universitas Gadjah Mada\par}
 \vfill
 \end{titlepage}
 }
@@ -65,6 +106,14 @@ Penjelasan: registry ini membuktikan tiap domain punya route module sendiri. Saa
 \item Penambahan barang baru.
 \item Pencarian dan filter barang.
 \end{enumerate}
+
+\section*{Diagram Scenario Flow Fitur}
+\subsection*{Penambahan barang baru}
+\featureflow{Admin mengisi form produk}{Catalog Service\\\texttt{POST /api/products}}{Insert \texttt{products}\\dan movement awal}{Produk tampil\\di katalog}
+
+\subsection*{Pencarian dan filter barang}
+\featureflow{User mengetik keyword\\atau memilih kategori}{Catalog Service\\\texttt{GET /api/products}}{Query filter\\\texttt{products}}{Kartu/tabel produk\\terfilter}
+
 
 \section*{Diagram Tabel yang Ditangani}
 \begin{center}
@@ -268,7 +317,19 @@ Penjelasan: query ini mencari produk dengan keyword \texttt{demo} pada nama prod
 \item Hubungkan tampilan UI dengan endpoint \texttt{GET /api/products} dan query \texttt{ILIKE} pada repository.
 \end{enumerate}
 
+
+
+\section*{Screenshot Demo}
+Screenshot berikut menjadi bukti visual bahwa Catalog Service sudah terhubung ke halaman admin dan katalog produk.
+
+\demoscreenshot{../screenshots/ravif-admin-tambah-produk.png}{Demo Ravif: form admin untuk menambahkan produk baru dan notifikasi hasil insert.}
+\demoscreenshot{../screenshots/ravif-web-pencarian-produk.png}{Demo Ravif: katalog customer/admin setelah pencarian dan filter produk dijalankan.}
+
 \section*{Bukti Validasi}
+Diagram berikut merangkum lapisan validasi yang dipakai sebelum demo: unit test memeriksa logic kecil, integration test membuktikan API dan PostgreSQL berjalan bersama, smoke test menjalankan alur final project end-to-end, lalu bukti demo mengaitkan UI, endpoint, SQL, dan perubahan data.
+
+\validationdiagram
+
 \begin{itemize}
 \item Unit test Catalog: \path{prokura-api/tests/unit/catalog-domain.test.js}.
 \item Repository test Catalog: \path{prokura-api/tests/unit/repository.test.js}.
