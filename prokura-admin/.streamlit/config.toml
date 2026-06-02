@@ -5,3 +5,11 @@ enableWebsocketCompression = false
 
 [client]
 allowedOrigins = ["https://prokura-admin.tierratie.com"]
+
+[theme]
+base = "light"
+primaryColor = "#2563eb"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#0f172a"
+font = "sans serif"
