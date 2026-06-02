@@ -1,0 +1,295 @@
+# Rencana Validasi Microservice dan Testing - Prokura
+
+Dokumen ini menjadi rencana kerja sekaligus progress checklist untuk memastikan Prokura memenuhi arahan final project:
+
+- Integrasi antar sistem/perusahaan menggunakan microservice.
+- Setiap sistem punya UI/UX.
+- Setiap anggota memiliki dua fitur.
+- Demo menampilkan SQL query, kode program, dan perubahan database.
+- Ada validasi unit test dan integration test.
+
+## Audit Kondisi Saat Ini
+
+Status saat dokumen dibuat:
+
+- UI admin dan customer web sudah tidak query database langsung.
+- Semua UI membaca/menulis data melalui `prokura-api`.
+- PostgreSQL berjalan via Docker.
+- Fitur per anggota sudah tersedia secara fungsional.
+- API masih berada dalam satu proses Express besar di `prokura-api/server.js`.
+
+Kesimpulan audit:
+
+- Sistem sudah memakai API boundary, tetapi belum microservice sempurna secara struktur source code dan deployability.
+- Agar lebih defensible saat presentasi, API perlu dipisah menjadi service boundary yang jelas: Catalog, Inventory, Customer, Order, Reporting.
+- Tahap awal dapat tetap satu proses Express untuk demo lokal, tetapi struktur folder, route module, domain logic, dan test harus menunjukkan service boundary yang tegas.
+- Tahap akhir ideal adalah setiap service dapat dijalankan sebagai proses/container terpisah atau minimal route module terpisah dengan kontrak API jelas.
+
+## Target Struktur Microservice
+
+Target bertahap:
+
+```text
+prokura-api/
+  Dockerfile
+  server.js
+  src/
+    service-host.js
+    shared/
+      db.js
+      http.js
+    services/
+      catalog/
+        routes.js
+        repository.js
+        domain.js
+        README.md
+      inventory/
+        routes.js
+        repository.js
+        domain.js
+        README.md
+      customer/
+        routes.js
+        repository.js
+        domain.js
+        README.md
+      order/
+        routes.js
+        repository.js
+        domain.js
+        README.md
+      reporting/
+        routes.js
+        repository.js
+        domain.js
+        README.md
+  tests/
+    unit/
+    integration/
+```
+
+Catatan:
+
+- `server.js` boleh menjadi API gateway/host Express.
+- `src/service-host.js` dapat menjalankan satu service saja berdasarkan `SERVICE_NAME`.
+- Setiap folder service harus punya tanggung jawab jelas.
+- Integrasi antar UI dan backend tetap melalui HTTP API.
+- Akses database tetap melalui repository/service layer, bukan dari UI.
+
+## Port Microservice Lokal
+
+Port aktif untuk validasi lokal:
+
+| Komponen | Port | Endpoint Health |
+| --- | --- | --- |
+| API Gateway | `5000` | `http://127.0.0.1:5000/api/health` |
+| Catalog Service | `5101` | `http://127.0.0.1:5101/health` |
+| Inventory Service | `5102` | `http://127.0.0.1:5102/health` |
+| Customer Service | `5103` | `http://127.0.0.1:5103/health` |
+| Order Service | `5104` | `http://127.0.0.1:5104/health` |
+| Reporting Service | `5105` | `http://127.0.0.1:5105/health` |
+| Customer Web | `3000` | `http://127.0.0.1:3000` |
+| Admin Web | `8501` | `http://127.0.0.1:8501/_stcore/health` |
+
+## Daftar Service dan Kontrak
+
+| Service | Endpoint | Status Saat Ini | Target |
+| --- | --- | --- | --- |
+| Catalog Service | `GET /api/products`, `POST /api/products`, `PATCH /api/products/:id`, `DELETE /api/products/:id` | Ada di `server.js` | Pindah ke `src/services/catalog` |
+| Inventory Service | `PATCH /api/products/:id/stock`, `GET /api/inventory/movements` | Ada di `server.js` | Pindah ke `src/services/inventory` |
+| Customer Service | `GET /api/companies`, `POST /api/companies`, `GET /api/users`, `POST /api/users` | Ada di `server.js` | Pindah ke `src/services/customer` |
+| Order Service | `POST /api/orders`, `GET /api/orders`, `GET /api/orders/:id`, `PATCH /api/orders/:id/status` | Ada di `server.js` | Pindah ke `src/services/order` |
+| Reporting Service | `GET /api/reports/sales`, `GET /api/admin/summary` | Ada di `server.js` | Pindah ke `src/services/reporting` |
+
+## Rencana Unit Test
+
+Unit test harus menguji logic yang tidak perlu database.
+
+Checklist:
+
+- [x] Membuat npm script `test`, `test:unit`, dan `test:integration`.
+- [x] Membuat folder test awal.
+- [x] Unit test Inventory Service untuk validasi jumlah stok masuk.
+- [x] Unit test Catalog Service untuk normalisasi SKU dan filter search.
+- [x] Unit test Customer Service untuk validasi email/user.
+- [x] Unit test Order Service untuk validasi payload checkout dan kalkulasi total.
+- [x] Unit test Reporting Service untuk helper agregasi/format data.
+
+## Rencana Integration Test
+
+Integration test menguji API + PostgreSQL Docker secara end-to-end.
+
+Checklist:
+
+- [x] Integration test membuat produk baru dan mencarinya.
+- [x] Integration test menambah stok dan mengecek movement.
+- [x] Integration test membuat company dan user.
+- [x] Integration test membuat order dan mengecek riwayat customer.
+- [x] Integration test mengecek reporting sales.
+- [x] Integration test reject order dan return stock.
+- [x] Integration test delete product yang sudah dipakai PO harus gagal.
+- [x] Integration test admin summary setelah transaksi.
+- [x] Integration test approval order non-reject tanpa return stock.
+
+## Rencana UI/UX Validation
+
+Checklist:
+
+- [x] Admin Streamlit smoke test via `streamlit.testing`.
+- [x] Next.js customer web build test.
+- [ ] Playwright/browser screenshot admin Dashboard.
+- [ ] Playwright/browser screenshot admin Inventory Service.
+- [ ] Playwright/browser screenshot customer checkout.
+- [x] Visual checklist manual jika browser automation tetap gagal di sandbox.
+
+## Rencana Refactor Source ke Service Boundary
+
+Tahap 1 - Fondasi:
+
+- [x] Membuat dokumen rencana ini.
+- [x] Menambahkan folder awal `src/services/inventory`.
+- [x] Memindahkan sebagian domain logic Inventory ke service module.
+- [x] Menambahkan folder awal `src/services/catalog`.
+- [x] Menambahkan folder awal `src/services/customer`.
+- [x] Menambahkan folder awal `src/services/order`.
+- [x] Menambahkan folder awal `src/services/reporting`.
+- [x] Menambahkan folder awal `src/shared`.
+- [x] Memindahkan sebagian domain logic Catalog, Customer, Order, dan Reporting ke service module.
+- [x] Menambahkan unit test Inventory.
+- [x] Menambahkan unit test Catalog, Customer, Order, dan Reporting.
+- [x] Menambahkan integration test API lintas service.
+
+Tahap 2 - Modularisasi API:
+
+- [x] Pindahkan route Catalog ke `src/services/catalog/routes.js`.
+- [x] Pindahkan route Inventory ke `src/services/inventory/routes.js`.
+- [x] Pindahkan route Customer ke `src/services/customer/routes.js`.
+- [x] Pindahkan route Order ke `src/services/order/routes.js`.
+- [x] Pindahkan route Reporting ke `src/services/reporting/routes.js`.
+- [x] `server.js` hanya memasang middleware dan register routes.
+
+Tahap 3 - Deployability:
+
+- [x] Tambah `docker-compose.microservices.yml`.
+- [x] Tambah `prokura-api/Dockerfile`.
+- [x] Tambah `src/service-host.js` untuk menjalankan satu service per proses.
+- [x] Pisahkan process service untuk Catalog, Inventory, Customer, Order, dan Reporting.
+- [x] Tambah health endpoint per service.
+- [x] Tambah dokumentasi port internal setiap service.
+- [x] Jalankan full `docker compose -f docker-compose.microservices.yml up --build -d` setelah memastikan port `5000` tidak sedang dipakai API lokal.
+
+## Cara Menjalankan Test
+
+Unit test:
+
+```bash
+cd prokura-api
+npm run test:unit
+```
+
+Integration test, dengan API dan PostgreSQL sudah hidup:
+
+```bash
+cd prokura-api
+npm run test:integration
+```
+
+Smoke test final project:
+
+```powershell
+.\scripts\final_project_smoke.ps1
+```
+
+## Progress Log
+
+### 2026-06-02
+
+- [x] Audit awal: sistem belum sepenuhnya microservice deployable, tetapi sudah API-based.
+- [x] Dokumen rencana microservice dan testing dibuat.
+- [x] Fondasi test API ditambahkan.
+- [x] Inventory domain module awal dibuat.
+- [x] Unit test Inventory dijalankan.
+- [x] Integration test lintas service dijalankan.
+- [x] `package.json` API diperbarui dengan script `test`, `test:unit`, dan `test:integration`.
+- [x] Domain module awal dibuat untuk Catalog, Customer, Order, dan Reporting.
+- [x] `server.js` mulai memakai domain module untuk validasi SKU, email, stok, payload order, dan rentang tanggal laporan.
+- [x] API lokal direstart agar memakai kode terbaru.
+- [x] `node --check server.js` lolos.
+- [x] `npm run test:unit` lolos dengan 15 test.
+- [x] `npm run test:integration` lolos dengan 1 test end-to-end API + PostgreSQL.
+- [x] `npm test` lolos dengan total 16 test.
+- [x] `scripts/final_project_smoke.ps1` lolos untuk Catalog, Inventory, Customer, Order, Reporting, dan final database state.
+- [x] Integration test ditambah untuk reject order, return stock, proteksi hapus produk yang sudah dipakai PO, dan admin summary.
+- [x] Route Catalog, Inventory, Customer, Order, dan Reporting dipindahkan dari `server.js` ke `src/services/*/routes.js`.
+- [x] Helper database dipindahkan ke `src/shared/db.js`.
+- [x] Helper response error dipindahkan ke `src/shared/http.js`.
+- [x] Repository inventory movement dipindahkan ke `src/services/inventory/repository.js`.
+- [x] API modular direstart dan `/api/health` lolos.
+- [x] `npm run test:integration` lolos dengan 2 test end-to-end API + PostgreSQL.
+- [x] `npm test` lolos dengan total 17 test.
+- [x] Smoke test final project dijalankan ulang setelah modularisasi route dan tetap lolos.
+- [x] Customer web `http://127.0.0.1:3000` merespons.
+- [x] Admin Streamlit `http://127.0.0.1:8501/_stcore/health` merespons `ok`.
+- [x] Integration test approval order tanpa return stock ditambahkan.
+- [x] `npm run test:integration` lolos dengan 3 test end-to-end API + PostgreSQL.
+- [x] `npm test` lolos dengan total 18 test.
+- [x] Repository SQL Catalog dipindahkan ke `src/services/catalog/repository.js`.
+- [x] Repository SQL Customer dipindahkan ke `src/services/customer/repository.js`.
+- [x] Repository SQL Order dipindahkan ke `src/services/order/repository.js`.
+- [x] Repository SQL Reporting dipindahkan ke `src/services/reporting/repository.js`.
+- [x] API direstart setelah pemisahan repository dan `/api/health` tetap lolos.
+- [x] Integration test diperkuat dengan suffix random agar tidak bentrok saat test dijalankan berdekatan.
+- [x] `npm test` lolos ulang dengan total 18 test setelah pemisahan repository.
+- [x] Smoke test final project lolos ulang setelah pemisahan repository.
+- [x] `src/service-host.js` dibuat untuk menjalankan service tunggal via `npm run service:*`.
+- [x] `docker-compose.microservices.yml` dibuat untuk API Gateway + 5 backend service + PostgreSQL.
+- [x] `docker compose -f docker-compose.microservices.yml config` lolos validasi konfigurasi.
+- [x] Kelima service backend lokal dinyalakan sebagai proses terpisah:
+  - Catalog `5101`, PID `33088`.
+  - Inventory `5102`, PID `34464`.
+  - Customer `5103`, PID `40776`.
+  - Order `5104`, PID `32392`.
+  - Reporting `5105`, PID `33720`.
+- [x] Health check kelima service lokal lolos dengan database `ok`.
+- [x] Endpoint representatif tiap service lokal lolos:
+  - Catalog `GET /api/products`.
+  - Inventory `GET /api/inventory/movements`.
+  - Customer `GET /api/companies`.
+  - Order `GET /api/orders`.
+  - Reporting `GET /api/admin/summary`.
+- [x] Proses lokal di port `5000`, `5101`, `5102`, `5103`, `5104`, dan `5105` dihentikan agar tidak bentrok dengan Docker Compose.
+- [x] Full stack Docker microservices berhasil dijalankan dengan `docker compose -f docker-compose.microservices.yml up --build -d`.
+- [x] Container aktif:
+  - `prokura-api-gateway` di `5000`.
+  - `prokura-catalog-service` di `5101`.
+  - `prokura-inventory-service` di `5102`.
+  - `prokura-customer-service` di `5103`.
+  - `prokura-order-service` di `5104`.
+  - `prokura-reporting-service` di `5105`.
+  - `prokura-postgres-ms` di `5440`.
+- [x] Health check API gateway dan kelima service container lolos.
+- [x] `npm test` terhadap API gateway container lolos dengan total 18 test sebelum repository unit test ditambah.
+- [x] Smoke test final project terhadap API gateway container lolos.
+- [x] Customer web `3000` dan Admin Streamlit `8501` tetap merespons setelah backend pindah ke container gateway.
+- [x] Unit test repository dengan mock database ditambahkan untuk Catalog, Customer, Order, dan Reporting.
+- [x] `npm run test:unit` lolos dengan total 23 test.
+- [x] `npm test` lolos dengan total 26 test.
+
+Catatan sisa:
+
+- Sistem sudah memiliki route/domain/repository boundary per service dan dapat dijalankan sebagai 1 proses per service secara lokal.
+- Compose microservices sudah tervalidasi penuh sampai build, container start, health check, integration test, dan smoke test.
+- Ada 1 moderate vulnerability dari `npm ci --omit=dev` saat Docker build; perlu ditinjau dengan `npm audit` sebelum final release.
+- Browser screenshot berbasis automation belum selesai karena validasi saat ini masih memakai HTTP health/build/smoke.
+- Validasi ulang 2026-06-02 sore:
+  - `docker compose -f docker-compose.microservices.yml up --build -d` berhasil menyalakan gateway dan 5 service.
+  - Health check API gateway dan Catalog, Inventory, Customer, Order, Reporting service lolos.
+  - `npm run test:unit` lolos dengan 23 test.
+  - `npm run test:integration` lolos dengan 3 test.
+  - `npm test` lolos dengan 26 test.
+  - `npm run build` pada `prokura-web` lolos.
+  - `scripts/final_project_smoke.ps1` lolos dan membuktikan create product, search, restock, movement, company, user, checkout, customer history, reporting, dan final stock movement.
+  - Customer web `http://127.0.0.1:3000` merespons.
+  - Admin Streamlit `http://127.0.0.1:8501/_stcore/health` merespons `ok`.
+  - Browser automation untuk screenshot belum dapat diselesaikan karena runtime browser gagal spawn di sandbox (`windows sandbox failed: spawn setup refresh`). Validasi visual diganti dengan build/health/inspeksi UI dan perlu screenshot manual bila dosen meminta bukti gambar.
