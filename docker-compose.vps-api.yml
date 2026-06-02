@@ -1,0 +1,34 @@
+services:
+  prokura-db:
+    image: postgres:16-alpine
+    container_name: prokura-db-container
+    restart: always
+    environment:
+      POSTGRES_USER: ${PROKURA_DB_USER}
+      POSTGRES_PASSWORD: ${PROKURA_DB_PASSWORD}
+      POSTGRES_DB: ${PROKURA_DB_NAME}
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
+      - ./prokura-api/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PROKURA_DB_USER} -d ${PROKURA_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  prokura-api:
+    build: ./prokura-api
+    container_name: prokura-api-container
+    restart: always
+    ports:
+      - "${PROKURA_API_HOST_PORT:-3011}:5000"
+    environment:
+      PGHOST: prokura-db
+      PGPORT: 5432
+      PGUSER: ${PROKURA_DB_USER}
+      PGPASSWORD: ${PROKURA_DB_PASSWORD}
+      PGDATABASE: ${PROKURA_DB_NAME}
+      PORT: 5000
+    depends_on:
+      prokura-db:
+        condition: service_healthy
