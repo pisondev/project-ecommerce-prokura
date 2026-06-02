@@ -98,8 +98,6 @@ server {
                 alias $webroot/document_errors/;
         }
 
-        proxy_hide_header Upgrade;
-
         include $base/nginx.ssl.conf_*;
 }
 EOF_SSL_CONF
